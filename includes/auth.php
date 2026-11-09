@@ -103,6 +103,33 @@ function require_login(): void {
 }
 
 /**
+ * Check if the currently authenticated user has administrator privileges.
+ * 
+ * @return bool
+ */
+function is_admin(): bool {
+    if (!is_logged_in()) {
+        return false;
+    }
+    $user = current_user();
+    return ($user['email'] === 'admin@securetask.local');
+}
+
+/**
+ * Gatekeeper enforcing administrator access (Role-Based Access Control / RBAC).
+ * 
+ * @return void
+ */
+function require_admin(): void {
+    require_login();
+    if (!is_admin()) {
+        set_flash('danger', 'Access Denied: Administrator privileges required to access that area.');
+        header('Location: dashboard.php');
+        exit;
+    }
+}
+
+/**
  * Guest gatekeeper: Ensures authenticated users do not revisit
  * login or registration pages needlessly.
  * 

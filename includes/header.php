@@ -45,6 +45,13 @@ $user = $is_auth ? current_user() : null;
                                 Dashboard
                             </a>
                         </li>
+                        <?php if (is_admin()): ?>
+                            <li>
+                                <a href="admin.php" class="nav-link <?= ($current_page === 'admin.php') ? 'active' : ''; ?>" style="color: var(--danger); font-weight: 700;">
+                                    Admin Panel
+                                </a>
+                            </li>
+                        <?php endif; ?>
                         <li>
                             <a href="add_task.php" class="btn btn-teal btn-sm">
                                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
@@ -105,3 +112,4 @@ $user = $is_auth ? current_user() : null;
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
+

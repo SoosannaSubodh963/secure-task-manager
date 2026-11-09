@@ -57,12 +57,13 @@ CREATE TABLE IF NOT EXISTS `tasks` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ====================================================================
--- Optional Seed Data for Initial Testing (Password for demo user is 'Password123!')
+-- Optional Seed Data for Initial Testing (Password is 'Password123!')
 -- Hash generated via password_hash('Password123!', PASSWORD_BCRYPT)
 -- ====================================================================
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `created_at`)
 VALUES 
-(1, 'Demo Student', 'demo@securetask.local', '$2y$10$o6V660vN53uU3W2V15kHNu4O/o6bZ3l2QY4f2L21tZ9P8Q4A/e5X2', NOW())
+(1, 'Demo Student', 'demo@securetask.local', '$2y$10$o6V660vN53uU3W2V15kHNu4O/o6bZ3l2QY4f2L21tZ9P8Q4A/e5X2', NOW()),
+(2, 'System Administrator', 'admin@securetask.local', '$2y$10$o6V660vN53uU3W2V15kHNu4O/o6bZ3l2QY4f2L21tZ9P8Q4A/e5X2', NOW())
 ON DUPLICATE KEY UPDATE `email` = `email`;
 
 INSERT INTO `tasks` (`user_id`, `title`, `description`, `priority`, `due_date`, `status`, `created_at`)
@@ -71,5 +72,8 @@ VALUES
 (1, 'Implement Prepared SQL Statements', 'Protect all task and user queries against SQL injection attacks.', 'High', DATE_ADD(CURRENT_DATE, INTERVAL 2 DAY), 'Completed', NOW()),
 (1, 'Set up GitHub Actions CI Pipeline', 'Automate syntax checks, security linting, and automated tests on push.', 'Medium', DATE_ADD(CURRENT_DATE, INTERVAL 3 DAY), 'Pending', NOW()),
 (1, 'Review OWASP Top 10 Compliance', 'Ensure CSRF, XSS, and broken access controls are completely mitigated.', 'Medium', DATE_ADD(CURRENT_DATE, INTERVAL 5 DAY), 'Pending', NOW()),
-(1, 'Plan AWS Cloud Migration Strategy', 'Draft architecture diagram for future migration to AWS Elastic Beanstalk and Amazon RDS.', 'Low', DATE_ADD(CURRENT_DATE, INTERVAL 7 DAY), 'Pending', NOW())
+(1, 'Plan AWS Cloud Migration Strategy', 'Draft architecture diagram for future migration to AWS Elastic Beanstalk and Amazon RDS.', 'Low', DATE_ADD(CURRENT_DATE, INTERVAL 7 DAY), 'Pending', NOW()),
+(2, 'Perform System Security Audit', 'Verify database indexes, user sessions, and CSRF token lifecycles.', 'High', DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY), 'Pending', NOW()),
+(2, 'Review GitHub Actions CI Build Logs', 'Ensure automated test runners and linters pass without warnings.', 'Medium', DATE_ADD(CURRENT_DATE, INTERVAL 2 DAY), 'Completed', NOW())
 ON DUPLICATE KEY UPDATE `title` = `title`;
+

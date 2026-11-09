@@ -114,3 +114,4 @@ function get_db(): PDO {
     global $pdo;
     return $pdo;
 }
+

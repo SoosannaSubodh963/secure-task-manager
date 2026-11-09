@@ -69,3 +69,4 @@ try {
 if (!$is_cli) {
     echo "</div></body></html>";
 }
+

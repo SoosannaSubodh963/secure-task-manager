@@ -400,3 +400,4 @@ While the application is configured to run smoothly in local XAMPP environments,
 - [x] Automated test runner (`tests/run-tests.php`) passes 7/7 checks.
 - [x] GitHub Actions CI pipeline (`.github/workflows/ci.yml`) configured for automated checks.
 - [x] DevSecOps security report documented in `tests/security-checks.md`.
+

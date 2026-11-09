@@ -34,3 +34,4 @@ set_flash('success', 'You have been logged out securely.');
 
 header('Location: login.php');
 exit;
+

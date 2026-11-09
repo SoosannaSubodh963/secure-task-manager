@@ -130,3 +130,4 @@ The test suite located at `tests/run-tests.php` runs both locally and automatica
 ```
 
 **Conclusion:** The application meets all specified cybersecurity requirements for the academic startup presentation.
+
