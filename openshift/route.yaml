@@ -1,0 +1,17 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: secure-task-manager
+  labels:
+    app: secure-task-manager
+    app.kubernetes.io/part-of: secure-task-management-system
+spec:
+  to:
+    kind: Service
+    name: secure-task-manager
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

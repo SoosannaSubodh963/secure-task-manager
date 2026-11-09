@@ -1,0 +1,23 @@
+# Version Control & Workflows
+.git
+.github
+.gitignore
+
+# Tests & Documentation (Keep container image lean)
+tests/
+*.md
+
+# Sensitive Local Configurations
+config/config.local.php
+.env
+.env.*
+
+# Temporary, Cache & OS Files
+*.tmp
+*.log
+sess_*
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode
+.idea

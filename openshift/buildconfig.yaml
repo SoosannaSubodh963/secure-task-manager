@@ -1,0 +1,25 @@
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: secure-task-manager
+  labels:
+    app: secure-task-manager
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: secure-task-manager
+  labels:
+    app: secure-task-manager
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: secure-task-manager:latest
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  source:
+    type: Binary
