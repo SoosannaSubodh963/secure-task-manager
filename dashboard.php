@@ -47,7 +47,7 @@ try {
 }
 
 // 2. Determine Filter Selection
-$allowed_filters = ['all', 'pending', 'completed', 'high'];
+$allowed_filters = ['all', 'pending', 'completed', 'high', 'review'];
 $current_filter  = sanitize_text($_GET['filter'] ?? 'all');
 if (!in_array($current_filter, $allowed_filters, true)) {
     $current_filter = 'all';
@@ -57,7 +57,7 @@ $search_query = sanitize_text($_GET['q'] ?? '');
 
 // 3. Fetch Tasks with Prepared Statement
 try {
-    $sql = "SELECT id, title, description, priority, due_date, status, created_at 
+    $sql = "SELECT id, title, description, priority, due_date, status, approval_status, admin_notes, created_at 
             FROM tasks 
             WHERE user_id = :user_id";
     $params = [':user_id' => $user_id];
@@ -68,6 +68,8 @@ try {
         $sql .= " AND status = 'Completed'";
     } elseif ($current_filter === 'high') {
         $sql .= " AND priority = 'High'";
+    } elseif ($current_filter === 'review') {
+        $sql .= " AND approval_status = 'Pending'";
     }
 
     if (!empty($search_query)) {
@@ -179,6 +181,10 @@ require_once __DIR__ . '/includes/header.php';
            class="filter-tab <?= ($current_filter === 'high') ? 'active' : ''; ?>">
             High Priority
         </a>
+        <a href="dashboard.php?filter=review<?= !empty($search_query) ? '&q=' . urlencode($search_query) : ''; ?>" 
+           class="filter-tab <?= ($current_filter === 'review') ? 'active' : ''; ?>" style="color: #b45309;">
+            In Review
+        </a>
     </div>
 
     <!-- Search Form -->
@@ -233,18 +239,37 @@ require_once __DIR__ . '/includes/header.php';
             <article class="task-card <?= $priority_class; ?> <?= $is_completed ? 'is-completed' : ''; ?>">
                 <div>
                     <div class="task-meta-top">
-                        <span class="badge badge-<?= strtolower($task['priority']); ?>">
-                            <?= e($task['priority']); ?> Priority
-                        </span>
-                        <span class="badge badge-<?= strtolower($task['status']); ?>">
-                            <?= e($task['status']); ?>
-                        </span>
+                        <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                            <span class="badge badge-<?= strtolower($task['priority']); ?>">
+                                <?= e($task['priority']); ?> Priority
+                            </span>
+                            <span class="badge badge-<?= strtolower($task['status']); ?>">
+                                <?= e($task['status']); ?>
+                            </span>
+                        </div>
+                        <div>
+                            <?php 
+                            $approval = $task['approval_status'] ?? 'Approved';
+                            if ($approval === 'Approved'): ?>
+                                <span class="badge" style="background:#ccfbf1; color:#0f766e; border: 1px solid #99f6e4;">&#10003; Approved</span>
+                            <?php elseif ($approval === 'Pending'): ?>
+                                <span class="badge" style="background:#fef3c7; color:#b45309; border: 1px solid #fde68a;">&#9203; Pending Review</span>
+                            <?php else: ?>
+                                <span class="badge" style="background:#fee2e2; color:#b91c1c; border: 1px solid #fecaca;">&#10007; Rejected</span>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
                     <h2 class="task-title"><?= e($task['title']); ?></h2>
 
                     <?php if (!empty($task['description'])): ?>
                         <p class="task-desc"><?= nl2br(e($task['description'])); ?></p>
+                    <?php endif; ?>
+
+                    <?php if (!empty($task['admin_notes'])): ?>
+                        <div style="font-size: 0.8rem; background: var(--slate-100); border-left: 3px solid var(--teal-600); padding: 0.4rem 0.65rem; border-radius: var(--radius-sm); margin-bottom: 0.75rem; color: var(--navy-800);">
+                            <strong>Admin Note:</strong> <?= e($task['admin_notes']); ?>
+                        </div>
                     <?php endif; ?>
                 </div>
 
@@ -260,20 +285,24 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
 
                         <div class="task-actions">
-                            <!-- Toggle Status Form (POST + CSRF) -->
-                            <form action="update_status.php" method="POST" style="display:inline;">
-                                <?= csrf_field(); ?>
-                                <input type="hidden" name="task_id" value="<?= (int)$task['id']; ?>">
-                                <input type="hidden" name="status" value="<?= $is_completed ? 'Pending' : 'Completed'; ?>">
-                                <button 
-                                    type="submit" 
-                                    class="btn btn-outline btn-sm" 
-                                    title="<?= $is_completed ? 'Mark as Pending' : 'Mark as Completed'; ?>"
-                                    style="<?= $is_completed ? 'color: var(--warning);' : 'color: var(--success);'; ?>"
-                                >
-                                    <?= $is_completed ? 'Undo' : 'Done'; ?>
-                                </button>
-                            </form>
+                            <!-- Toggle Status Form (POST + CSRF) - Enabled once approved or for admin -->
+                            <?php if (($task['approval_status'] ?? 'Approved') === 'Approved' || is_admin()): ?>
+                                <form action="update_status.php" method="POST" style="display:inline;">
+                                    <?= csrf_field(); ?>
+                                    <input type="hidden" name="task_id" value="<?= (int)$task['id']; ?>">
+                                    <input type="hidden" name="status" value="<?= $is_completed ? 'Pending' : 'Completed'; ?>">
+                                    <button 
+                                        type="submit" 
+                                        class="btn btn-outline btn-sm" 
+                                        title="<?= $is_completed ? 'Mark as Pending' : 'Mark as Completed'; ?>"
+                                        style="<?= $is_completed ? 'color: var(--warning);' : 'color: var(--success);'; ?>"
+                                    >
+                                        <?= $is_completed ? 'Undo' : 'Done'; ?>
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <span class="badge" style="background:var(--slate-100); color:var(--slate-500); font-size:0.75rem;" title="Awaiting Administrator approval">Under Review</span>
+                            <?php endif; ?>
 
                             <!-- Edit Link -->
                             <a href="edit_task.php?id=<?= (int)$task['id']; ?>" class="btn btn-outline btn-sm" title="Edit Task">

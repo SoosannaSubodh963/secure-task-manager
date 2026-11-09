@@ -9,7 +9,8 @@
  * - Enforces PDO::ATTR_EMULATE_PREPARES => false to ensure real prepared
  *   statements are executed by the MySQL engine (SQLi immunity).
  * - Implements secure credential isolation (Environment variables or config.local.php).
- * - Suppresses raw database errors from end-users to prevent information disclosure.
+ * - Automatic schema migration ensuring RBAC and audit logs are ready.
+ * - Security event logging helper audit_log().
  * ====================================================================
  */
 
@@ -52,23 +53,18 @@ $dsn = "mysql:host={$db_host};port={$db_port};dbname={$db_name};charset={$db_cha
 
 // 5. PDO Connection Options
 $options = [
-    // Throw exceptions on error so they can be caught and handled securely
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    // Return rows as associative arrays by default
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    // Disable emulated prepares to enforce server-side prepared statements
     PDO::ATTR_EMULATE_PREPARES   => false,
-    // Persistent connections disabled for predictable state management
     PDO::ATTR_PERSISTENT         => false,
 ];
 
 try {
     $pdo = new PDO($dsn, $db_user, $db_pass, $options);
+    auto_migrate_schema($pdo);
 } catch (PDOException $e) {
-    // SECURITY: Log error details server-side only; never expose credentials or stack traces to clients
     error_log("[Database Connection Error] " . $e->getMessage());
 
-    // Display user-friendly error message
     http_response_code(500);
     ?>
     <!DOCTYPE html>
@@ -93,16 +89,94 @@ try {
             <p>The application could not connect to MySQL. If you are running locally in XAMPP, please verify that:</p>
             <div class="box">
                 1. The MySQL service is running in XAMPP Control Panel.<br>
-                2. The database <strong>secure_task_manager</strong> has been imported via phpMyAdmin.<br>
-                3. File <strong>database/database.sql</strong> was executed successfully.
+                2. Run the one-click setup at <strong><a href="setup_database.php" style="color:#38bdf8;">setup_database.php</a></strong>.<br>
+                3. Or import <strong>database/database.sql</strong> via phpMyAdmin.
             </div>
-            <p>For more setup details, refer to the <code>README.md</code> included in this project.</p>
             <a href="index.php" class="btn">Retry Connection</a>
         </div>
     </body>
     </html>
     <?php
     exit;
+}
+
+/**
+ * Automatically migrate database schema to include workflow approval and audit logging.
+ * 
+ * @param PDO $pdo
+ * @return void
+ */
+function auto_migrate_schema(PDO $pdo): void {
+    static $done = false;
+    if ($done) return;
+
+    try {
+        // Ensure tasks table has approval_status and admin_notes
+        $col_approval = $pdo->query("SHOW COLUMNS FROM tasks LIKE 'approval_status'");
+        if (!$col_approval->fetch()) {
+            $pdo->exec("ALTER TABLE tasks ADD COLUMN approval_status ENUM('Pending', 'Approved', 'Rejected') NOT NULL DEFAULT 'Approved'");
+            $pdo->exec("ALTER TABLE tasks ADD COLUMN admin_notes VARCHAR(255) NULL");
+            $pdo->exec("ALTER TABLE tasks ADD INDEX idx_tasks_approval_status (approval_status)");
+        }
+
+        // Ensure users table has status (Active / Suspended)
+        $col_status = $pdo->query("SHOW COLUMNS FROM users LIKE 'status'");
+        if (!$col_status->fetch()) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN status ENUM('Active', 'Suspended') NOT NULL DEFAULT 'Active'");
+        }
+
+        // Ensure audit_logs table exists
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                user_id INT UNSIGNED NULL,
+                action VARCHAR(100) NOT NULL,
+                details TEXT NULL,
+                ip_address VARCHAR(45) NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_audit_user_id (user_id),
+                KEY idx_audit_action (action),
+                KEY idx_audit_created_at (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+
+        $done = true;
+    } catch (Throwable $e) {
+        // Table might not exist yet if database.sql hasn't executed
+    }
+}
+
+/**
+ * Record a security or operational event to the DevSecOps audit log.
+ * 
+ * @param string $action Action identifier (e.g., 'LOGIN_SUCCESS', 'TASK_APPROVED')
+ * @param string|null $details Descriptive details
+ * @param int|null $user_id Acting user ID
+ * @return void
+ */
+function audit_log(string $action, ?string $details = null, ?int $user_id = null): void {
+    global $pdo;
+    if (!$pdo) return;
+
+    try {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        if ($user_id === null && function_exists('current_user_id')) {
+            $user_id = current_user_id();
+        }
+        $stmt = $pdo->prepare("
+            INSERT INTO audit_logs (user_id, action, details, ip_address)
+            VALUES (:uid, :act, :det, :ip)
+        ");
+        $stmt->execute([
+            ':uid' => $user_id,
+            ':act' => $action,
+            ':det' => $details,
+            ':ip'  => $ip,
+        ]);
+    } catch (Throwable $e) {
+        error_log("[Audit Log Write Error] " . $e->getMessage());
+    }
 }
 
 /**
@@ -114,4 +188,3 @@ function get_db(): PDO {
     global $pdo;
     return $pdo;
 }
-

@@ -62,21 +62,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         try {
             $user_id = current_user_id();
+            // Administrators auto-approve their own tasks; standard user tasks enter the approval queue
+            $initial_approval = is_admin() ? 'Approved' : 'Pending';
 
             $stmt = $pdo->prepare("
-                INSERT INTO tasks (user_id, title, description, priority, due_date, status)
-                VALUES (:user_id, :title, :description, :priority, :due_date, 'Pending')
+                INSERT INTO tasks (user_id, title, description, priority, due_date, status, approval_status)
+                VALUES (:user_id, :title, :description, :priority, :due_date, 'Pending', :approval_status)
             ");
 
             $stmt->execute([
-                ':user_id'     => $user_id,
-                ':title'       => $title,
-                ':description' => !empty($description) ? $description : null,
-                ':priority'    => $priority,
-                ':due_date'    => $formatted_due_date,
+                ':user_id'         => $user_id,
+                ':title'           => $title,
+                ':description'     => !empty($description) ? $description : null,
+                ':priority'        => $priority,
+                ':due_date'        => $formatted_due_date,
+                ':approval_status' => $initial_approval,
             ]);
 
-            set_flash('success', 'Task "' . htmlspecialchars($title) . '" created successfully.');
+            // DevSecOps Audit Trail
+            $task_id = (int)$pdo->lastInsertId();
+            audit_log('TASK_CREATED', "User created task #{$task_id}: '{$title}' (Approval: {$initial_approval})", $user_id);
+
+            $msg = is_admin() 
+                ? 'Task "' . htmlspecialchars($title) . '" created successfully.' 
+                : 'Task "' . htmlspecialchars($title) . '" submitted and queued for Administrator approval.';
+            
+            set_flash('success', $msg);
             header('Location: dashboard.php');
             exit;
         } catch (PDOException $e) {

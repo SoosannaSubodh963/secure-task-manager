@@ -102,13 +102,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($user && $is_password_valid) {
-                // Initialize secure authenticated session with regenerated session ID
-                login_user($user);
+                // Check if account was suspended by Administrator
+                if (isset($user['status']) && $user['status'] === 'Suspended') {
+                    audit_log('LOGIN_BLOCKED_SUSPENDED', "Suspended account '{$user['email']}' attempted login", $user['id']);
+                    $errors[] = "This account has been suspended by an Administrator. Please contact support.";
+                } else {
+                    // Initialize secure authenticated session with regenerated session ID
+                    login_user($user);
 
-                set_flash('success', "Welcome back, " . htmlspecialchars($user['name']) . "!");
-                header('Location: dashboard.php');
-                exit;
+                    // DevSecOps Audit Log
+                    audit_log('LOGIN_SUCCESS', "User #{$user['id']} ({$user['email']}) logged in successfully", $user['id']);
+
+                    set_flash('success', "Welcome back, " . htmlspecialchars($user['name']) . "!");
+                    header('Location: dashboard.php');
+                    exit;
+                }
             } else {
+                // DevSecOps Audit Log
+                audit_log('LOGIN_FAILED', "Failed login attempt for identifier: '{$login_input}'", null);
                 // Generic error message prevents username/email enumeration
                 $errors[] = "Invalid email address or password.";
             }
