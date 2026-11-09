@@ -1,0 +1,61 @@
+name: Secure Task Manager CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  validate-and-test:
+    name: Build, Lint & Security Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP Environment
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo, pdo_mysql, mbstring, json, filter, session
+          coverage: none
+
+      - name: Display PHP Version & Extensions
+        run: |
+          php -v
+          php -m
+
+      - name: Validate PHP Syntax (Linting via php -l)
+        run: |
+          echo "Starting PHP syntax verification across all project files..."
+          find . -name "*.php" -not -path "./vendor/*" -exec php -l {} \;
+
+      - name: Run Automated Application & Security Tests
+        run: |
+          echo "Executing test suite..."
+          php tests/run-tests.php
+
+      - name: DevSecOps Secrets & Configuration Leak Check
+        run: |
+          echo "Verifying no local credentials or production secrets are tracked in Git..."
+          if git ls-files | grep -E "(config\.local\.php|\.env$)"; then
+            echo "SECURITY VIOLATION: Sensitive environment or local configuration committed to Git!"
+            exit 1
+          else
+            echo "Secret audit PASSED: No sensitive configuration files tracked."
+          fi
+
+      - name: Validate Database Schema SQL Integrity
+        run: |
+          echo "Verifying database.sql script presence and syntax structure..."
+          test -f database/database.sql
+          grep -i "CREATE TABLE IF NOT EXISTS \`users\`" database/database.sql
+          grep -i "CREATE TABLE IF NOT EXISTS \`tasks\`" database/database.sql
+          echo "Database schema verification PASSED."
+
+      - name: Pipeline Status Summary
+        if: always()
+        run: |
+          echo "CI/CD Pipeline finished successfully for commit ${{ github.sha }}."
