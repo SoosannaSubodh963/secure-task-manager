@@ -59,10 +59,10 @@ $user = $is_auth ? current_user() : null;
                             </a>
                         </li>
                         <li>
-                            <div class="nav-user">
+                            <a href="profile.php" class="nav-user" style="text-decoration: none;" title="Account & Security Settings">
                                 <span class="nav-user-dot"></span>
                                 <span><?= e($user['name'] ?? 'User'); ?></span>
-                            </div>
+                            </a>
                         </li>
                         <li>
                             <form action="logout.php" method="POST" style="display:inline;">
