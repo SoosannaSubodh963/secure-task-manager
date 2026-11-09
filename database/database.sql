@@ -62,9 +62,9 @@ CREATE TABLE IF NOT EXISTS `tasks` (
 -- ====================================================================
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `created_at`)
 VALUES 
-(1, 'Demo Student', 'demo@securetask.local', '$2y$10$o6V660vN53uU3W2V15kHNu4O/o6bZ3l2QY4f2L21tZ9P8Q4A/e5X2', NOW()),
-(2, 'System Administrator', 'admin@securetask.local', '$2y$10$o6V660vN53uU3W2V15kHNu4O/o6bZ3l2QY4f2L21tZ9P8Q4A/e5X2', NOW())
-ON DUPLICATE KEY UPDATE `email` = `email`;
+(1, 'Demo Student', 'demo@securetask.local', '$2y$10$CEZhZma5Uytex9W4jqYq8u9Uzb9u9q7EOat7R0ZOuY.RnLTmmAs8q', NOW()),
+(2, 'System Administrator', 'admin@securetask.local', '$2y$10$CEZhZma5Uytex9W4jqYq8u9Uzb9u9q7EOat7R0ZOuY.RnLTmmAs8q', NOW())
+ON DUPLICATE KEY UPDATE `password` = VALUES(`password`);
 
 INSERT INTO `tasks` (`user_id`, `title`, `description`, `priority`, `due_date`, `status`, `created_at`)
 VALUES

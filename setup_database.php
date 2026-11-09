@@ -47,9 +47,15 @@ try {
 
     // 3. Execute the full database.sql schema
     $pdo->exec($sql_content);
+
+    // 4. Guarantee fresh valid password hashes for demo accounts
+    $fresh_hash = password_hash('Password123!', PASSWORD_BCRYPT);
+    $fix_stmt = $pdo->prepare("UPDATE secure_task_manager.users SET password = :pwd WHERE email IN ('demo@securetask.local', 'admin@securetask.local')");
+    $fix_stmt->execute([':pwd' => $fresh_hash]);
+
     output_msg("Database 'secure_task_manager' created successfully!", "success");
     output_msg("Tables 'users' and 'tasks' created successfully!", "success");
-    output_msg("Demo data inserted successfully! (demo@securetask.local / Password123!)", "success");
+    output_msg("Demo accounts verified with password: Password123!", "success");
 
     if (!$is_cli) {
         echo "<p style='color:#cbd5e1;margin-top:20px;'>Your database is completely setup and ready to use!</p>";
